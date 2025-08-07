@@ -3,10 +3,6 @@
 (comment "Hello World"
          "Have A Comment")
 
-(DEFMACRO macroexpand-n (n expr)
-  (IF (< n 1) expr
-      `(macroexpand-n ,(- n 1) (MACROEXPAND-1 ,expr))))
-
 (defun test-mul int ((a int) &optional (b int (- 2)))
   (return (* a b)))
 
@@ -17,6 +13,7 @@
     (dotimes (i num-of-args)
       (printf "Arg %d: %s\\n" (/ i  1) (aref argv (+ i 1)))))
 
-  (test-mul 4)
+  (printf "test-mul 4 => %d\\n" (test-mul 4))
+  (printf "test-mul 4 4 => %d\\n" (test-mul 4 4))
   (return argc))
 

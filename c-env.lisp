@@ -49,8 +49,8 @@
           `(DEFMACRO ,name ,(MAPCAR #'LISPIFY-PARAM vars)
              (LIST
                'RESOLVE-EXPR
-                     ',(INTERN (STRING (BUILD-C-SYMBOL name)))
-                     ,@(MAPCAR #'(LAMBDA (var) (IF (LISTP var) (CAR var) var)) stripped-vars)))
+               ',(INTERN (STRING (BUILD-C-SYMBOL name)))
+               ,@(MAPCAR #'(LAMBDA (var) (IF (LISTP var) (CAR var) var)) stripped-vars)))
         ))))
 
 
@@ -83,13 +83,13 @@
   (UNLESS (LISTP vars) (ERROR "~S: expected ~S to be a list" 'BUILD-PARAMS vars))
   (LET* ((vars vars)
          (normal-args
-          (LOOP FOR var = (CAR vars)
-                UNTIL (OR (NULL var)
-                          (EQ '&optional var)
-                          (EQ '&rest var)
-                          (EQ '&key var))
-                COLLECT (POP vars) INTO args
-                FINALLY (RETURN args)))
+           (LOOP FOR var = (CAR vars)
+                 UNTIL (OR (NULL var)
+                           (EQ '&optional var)
+                           (EQ '&rest var)
+                           (EQ '&key var))
+                 COLLECT (POP vars) INTO args
+                 FINALLY (RETURN args)))
          (optional-args
            (IF (EQ '&optional (CAR vars))
                (PROGN (POP vars)
@@ -104,7 +104,7 @@
            (IF (EQ '&rest (CAR vars))
                (PROGN (POP vars)
                       (POP vars))
-                      NIL))
+               NIL))
          (key-args
            (IF (EQ '&key (CAR vars))
                (PROGN (POP vars)
@@ -145,6 +145,11 @@
           (- `(sub ,@args))
           (* `(mul ,@args))
           (/ `(div ,@args))
+          ((< lt) `(logical "<" ,@args))
+          ((<= le) `(logical "<=" ,@args))
+          ((> gt) `(logical ">" ,@args))
+          ((>= ge) `(logical ">=" ,@args))
+          ((= eq) `(logical "==" ,@args))
           (OTHERWISE (IF (FBOUNDP sym)
                          `(,sym ,@args)
                          `(call ,sym ,@args))))
@@ -209,10 +214,10 @@
 (DEFMACRO headers (&REST paths)
   `(PROGN
      ,@(MAPCAR #'(LAMBDA (path)
-                  (IF (LISTP path)
-                      `(header ,@path)
-                      `(header ,path)))
-              paths)
+                   (IF (LISTP path)
+                       `(header ,@path)
+                       `(header ,path)))
+               paths)
      (WRITE-LINE "")
      NIL))
 
@@ -313,11 +318,11 @@
 (DEFMACRO defvar (name type &OPTIONAL value &KEY modifier)
   `(PROGN
      ,(WHEN modifier
-       `(FORMAT T "~A " ,modifier))
+        `(FORMAT T "~A " ,modifier))
      (WRITE-STRING (BUILD-VAR '(,name ,type)))
      ,@(WHEN value
-       `((WRITE-STRING " = ")
-         (RESOLVE-EXPR ,value)))
+         `((WRITE-STRING " = ")
+           (RESOLVE-EXPR ,value)))
      T))
 
 (DEFMACRO let (vars &BODY body)
@@ -337,6 +342,37 @@
      (WRITE-STRING ")")
      T))
 
+(DEFMACRO do (test &BODY body)
+  `(PROGN
+     (WRITE-STRING "do")
+     (block NIL ,@body)
+     (INDENT ,*block-indentation*)
+     (WRITE-STRING "while(")
+     (RESOLVE-EXPR ,test)
+     (WRITE-STRING ")")
+     T))
+
+(DEFMACRO while (test &BODY body)
+  `(PROGN
+     (WRITE-STRING "while(")
+     (RESOLVE-EXPR ,test)
+     (WRITE-STRING ")")
+     (block NIL ,@body)
+     T))
+
+(DEFMACRO logical (op first second)
+  `(PROGN
+     (WRITE-STRING "(")
+     (RESOLVE-EXPR ,first)
+     (WRITE-STRING ,op)
+     (RESOLVE-EXPR ,second)
+     (WRITE-STRING ")")))
+
+(DEFMACRO and (first second)
+  `(logical "&&" ,first ,second))
+
+(DEFMACRO or (first second)
+  `(logical "||" ,first ,second))
 
 (LET ((ALL-SYMBOLS '()))
   (DO-SYMBOLS (S (FIND-PACKAGE :C-ENV))
