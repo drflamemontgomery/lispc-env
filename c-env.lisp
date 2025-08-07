@@ -2,6 +2,7 @@
 (IN-PACKAGE :C-ENV)
 
 (DEFPARAMETER *block-indentation* 0)
+(DEFVAR *top-level-output* *STANDARD-OUTPUT*)
 
 (DEFUN REPLACE-CHAR (BEFORE AFTER STR)
   (LOOP FOR CHAR ACROSS STR
@@ -34,12 +35,16 @@
                           (STRINGP name)) name)
                      (T (ERROR "~S: name ~S SHOULD BE SYMBOL OR STRING"
                                'defun)))))
-    (FORMAT T "~@[~A ~]~A ~A(~{~A~^, ~})~:[;~;~]" 
-            modifier (BUILD-C-SYMBOL type)
-            (BUILD-C-SYMBOL name)
-            (BUILD-PARAMS vars)
-            body)
-    (EVAL `(block NIL ,@body))
+    (WRITE-STRING
+      (WITH-OUTPUT-TO-STRING (s)
+        (LET ((*top-level-output* *STANDARD-OUTPUT*)
+              (*STANDARD-OUTPUT* s))
+                (FORMAT T "~@[~A ~]~A ~A(~{~A~^, ~})~:[;~;~]" 
+                        modifier (BUILD-C-SYMBOL type)
+                        (BUILD-C-SYMBOL name)
+                        (BUILD-PARAMS vars)
+                        body)
+                (EVAL `(block NIL ,@body)))))
     (LET ((stripped-vars (REMOVE-IF
                            #'(LAMBDA (var) (CASE var
                                              ((&OPTIONAL &KEY &REST) T)
@@ -205,11 +210,12 @@
        (block NIL ,@body))))
 
 (DEFUN header (path &OPTIONAL (type :system))
-  (FORMAT T "#include ")
-  (CASE type
-    ((:local :absolute) (FORMAT T "\"~a\"" path))
-    ((:system) (FORMAT T "<~a>" path)))
-  (FORMAT T "~%"))
+  (LET ((*STANDARD-OUTPUT* *top-level-output*))
+    (FORMAT T "#include ")
+    (CASE type
+      ((:local :absolute) (FORMAT T "\"~a\"" path))
+      ((:system) (FORMAT T "<~a>" path)))
+    (FORMAT T "~%")))
 
 (DEFMACRO headers (&REST paths)
   `(PROGN
