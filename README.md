@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
 Why
 ---
 
-Lisp has macros. **Proper** macros. However, Lisp is interpreted.
-C is **compiled** and **Fast**. But C **doesn't** have macros.
+Lisp has macros. **Proper** macros. However, Lisp requires a virtual machine to run.
+C is **natively compiled** and **fast**. But C **doesn't** have macros.
 
 Usage
 ---
